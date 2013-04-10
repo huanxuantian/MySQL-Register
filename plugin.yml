@@ -1,0 +1,13 @@
+name: MySQL Register
+main: com.msalihov.plugins.register.Register
+version: 0.1
+author: msalihov
+commands:
+  register:
+    description: Register for website
+    usage: /<command> [Email] [Password] [Password Confirmation]
+    permission: mysqlregister.register
+permissions:
+  mysqlregister.register:
+    description: Allows user to use the /register command
+    default: true

@@ -1,0 +1,11 @@
+connection:
+  hostname: localhost
+  port: 3306
+  name: minecraft
+  username: plugin
+  password: password
+database:
+  table-name: users
+  user-column: username
+  password-column: password
+  email-column: email
