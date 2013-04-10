@@ -3,6 +3,7 @@ package com.msalihov.plugins.register;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,6 +36,7 @@ public class Register extends JavaPlugin {
 	public static final String CANT_RUN=ChatColor.RED+"Cannot register at this time!";
 	public static final String TOO_MANY_ARGS=ChatColor.RED+"Too many arguments!";
 	public static final String TOO_LITTLE_ARGS=ChatColor.RED+"Too little arguments!";
+	public static final String ALREADY_REG=ChatColor.RED+"You are already registered!";
 	
 	@Override
 	public void onEnable(){
@@ -119,6 +121,26 @@ public class Register extends JavaPlugin {
 		return null;
 	}
 	
+	public boolean canRegister(String username){
+        try {
+            ResultSet rs=db.query("SELECT * FROM "+tablename+" WHERE "+usercolumn+"='"+username+"'");
+            int i=0;
+            while(rs.next()){
+                i++;
+            }
+            if(i==0){
+                return true;
+            }
+            else{
+                return false;
+            }
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+	
 	@Override
 	public boolean onCommand(CommandSender sender,Command cmd,String label,String[] args){
 		if(db.isOpen()){
@@ -133,39 +155,45 @@ public class Register extends JavaPlugin {
 						return false;
 					}
 					if(sender.hasPermission("mysqlregister.register")){
-						if(isEmailValid(args[0])){
-							if(args[1].equals(args[2])){
-								try {
-									String pass=hashPasswordMD5(args[1]);
-									this.getLogger().info("MD5: "+pass);
-									ps=db.prepare("INSERT INTO "+tablename+" ("+usercolumn+","+passcolumn+","+emailcolumn+") VALUES (?,?,?)");
-									ps.setString(1, sender.getName());
-									ps.setString(2, pass);
-									ps.setString(3, args[0]);
-									try{
-										db.query(ps);
-										sender.sendMessage(REGISTER_SUCCESS);
-										return true;
-									}
-									catch(SQLException e){
-										this.getLogger().log(Level.SEVERE, "Registration error: could not execute prepared statement!");
+						if(canRegister(sender.getName())){
+							if(isEmailValid(args[0])){
+								if(args[1].equals(args[2])){
+									try {
+										String pass=hashPasswordMD5(args[1]);
+										this.getLogger().info("MD5: "+pass);
+										ps=db.prepare("INSERT INTO "+tablename+" ("+usercolumn+","+passcolumn+","+emailcolumn+") VALUES (?,?,?)");
+										ps.setString(1, sender.getName());
+										ps.setString(2, pass);
+										ps.setString(3, args[0]);
+										try{
+											db.query(ps);
+											sender.sendMessage(REGISTER_SUCCESS);
+											return true;
+										}
+										catch(SQLException e){
+											this.getLogger().log(Level.SEVERE, "Registration error: could not execute prepared statement!");
+											sender.sendMessage(REGISTER_FAIL);
+											e.printStackTrace();
+										}
+									} catch (SQLException e) {
+										this.getLogger().log(Level.SEVERE, "Registration error: could not prepare statement/assign values to it!");
 										sender.sendMessage(REGISTER_FAIL);
 										e.printStackTrace();
 									}
-								} catch (SQLException e) {
-									this.getLogger().log(Level.SEVERE, "Registration error: could not prepare statement/assign values to it!");
-									sender.sendMessage(REGISTER_FAIL);
-									e.printStackTrace();
+								}
+								else{
+									sender.sendMessage(NOMATCH_PASS);
+									return false;
 								}
 							}
 							else{
-								sender.sendMessage(NOMATCH_PASS);
+								sender.sendMessage(INVALID_EMAIL);
 								return false;
 							}
 						}
 						else{
-							sender.sendMessage(INVALID_EMAIL);
-							return false;
+							sender.sendMessage(ALREADY_REG);
+							return true;
 						}
 					}
 					else{

@@ -1,6 +1,6 @@
 name: MySQL Register
 main: com.msalihov.plugins.register.Register
-version: 0.1
+version: 0.2
 author: msalihov
 commands:
   register:
