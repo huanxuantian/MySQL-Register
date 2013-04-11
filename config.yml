@@ -9,3 +9,4 @@ database:
   user-column: username
   password-column: password
   email-column: email
+hashing: md5

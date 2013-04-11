@@ -26,6 +26,8 @@ public class Register extends JavaPlugin {
 	private String usercolumn;
 	private String emailcolumn;
 	private String passcolumn;
+	private String hashing;
+	private int passchars;
 	
 	public static final String PLAYER_ONLY=ChatColor.RED+"Only a player may register!";
 	public static final String NO_PERMISSIONS=ChatColor.RED+"You do not have permission to register!";
@@ -50,6 +52,19 @@ public class Register extends JavaPlugin {
 		usercolumn=this.getConfig().getString("database.user-column","username");
 		emailcolumn=this.getConfig().getString("database.email-column","email");
 		passcolumn=this.getConfig().getString("database.password-column","password");
+		hashing=this.getConfig().getString("hashing","none");
+		if("md5".equals(hashing)){
+			passchars=32;
+			this.getLogger().log(Level.INFO, "MD5 hashing selected!");
+		}
+		else if("sha1".equals(hashing)){
+			passchars=40;
+			this.getLogger().log(Level.INFO, "SHA1 hashing selected!");
+		}
+		else{
+			passchars=128;
+			this.getLogger().log(Level.INFO, "No hashing selected!");
+		}
 		this.getLogger().log(Level.INFO, "Connecting to database...");
 		db=new MySQL(Logger.getLogger("Minecraft"),"MySQL Register",dbhost,dbport,dbname,dbuser,dbpass);
 		if(db.open()){
@@ -61,7 +76,7 @@ public class Register extends JavaPlugin {
 		if(!db.isTable(tablename)){
 			this.getLogger().log(Level.WARNING, "Did not find table specified in cofig! Creating it...");
 			try {
-				db.query("CREATE TABLE "+tablename+" (id INT PRIMARY KEY AUTO_INCREMENT,"+usercolumn+" VARCHAR(128) NOT NULL,"+passcolumn+" VARCHAR(32) NOT NULL,"+emailcolumn+" VARCHAR(256) NOT NULL)");
+				db.query("CREATE TABLE "+tablename+" (id INT PRIMARY KEY AUTO_INCREMENT,"+usercolumn+" VARCHAR(128) NOT NULL,"+passcolumn+" VARCHAR("+passchars+") NOT NULL,"+emailcolumn+" VARCHAR(256) NOT NULL)");
 				this.getLogger().log(Level.INFO, "Table created!");
 			} catch (SQLException e) {
 				this.getLogger().log(Level.SEVERE, "Table creation failed!");
@@ -102,23 +117,44 @@ public class Register extends JavaPlugin {
         }
 	}
 	
-	public String hashPasswordMD5(String password){
+	public String hashPassword(String password){
 		String hashed;
-		try{
-			MessageDigest hash=MessageDigest.getInstance("MD5");
-			hash.update(password.getBytes());
-			byte[] digest=hash.digest();
-			StringBuffer sb=new StringBuffer();
-			for(byte b : digest){
-				sb.append(Integer.toHexString((int) (b & 0xff)));
+		if("md5".equals(hashing)){
+			try{
+				MessageDigest hash=MessageDigest.getInstance("MD5");
+				hash.update(password.getBytes());
+				byte[] digest=hash.digest();
+				StringBuffer sb=new StringBuffer();
+				for(byte b : digest){
+					sb.append(Integer.toHexString((int) (b & 0xff)));
+				}
+				hashed=sb.toString();
+				return hashed;
 			}
-			hashed=sb.toString();
-			return hashed;
+			catch(NoSuchAlgorithmException e){
+				e.printStackTrace();
+			}
 		}
-		catch(NoSuchAlgorithmException e){
-			e.printStackTrace();
+		else if("sha1".equals(hashing)){
+			try{
+				MessageDigest hash=MessageDigest.getInstance("SHA1");
+				hash.update(password.getBytes());
+				byte[] digest=hash.digest();
+				StringBuffer sb=new StringBuffer();
+				for(byte b : digest){
+					sb.append(Integer.toHexString((int) (b & 0xff)));
+				}
+				hashed=sb.toString();
+				return hashed;
+			}
+			catch(NoSuchAlgorithmException e){
+				e.printStackTrace();
+			}
 		}
-		return null;
+		else{
+			return password;
+		}
+		return password;
 	}
 	
 	public boolean canRegister(String username){
@@ -159,8 +195,7 @@ public class Register extends JavaPlugin {
 							if(isEmailValid(args[0])){
 								if(args[1].equals(args[2])){
 									try {
-										String pass=hashPasswordMD5(args[1]);
-										this.getLogger().info("MD5: "+pass);
+										String pass=hashPassword(args[1]);
 										ps=db.prepare("INSERT INTO "+tablename+" ("+usercolumn+","+passcolumn+","+emailcolumn+") VALUES (?,?,?)");
 										ps.setString(1, sender.getName());
 										ps.setString(2, pass);
