@@ -1,13 +1,9 @@
 package com.msalihov.plugins.register;
 
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import lib.PatPeter.SQLibrary.Database;
-import lib.PatPeter.SQLibrary.MySQL;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -17,7 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class Register extends JavaPlugin {
     
-    public static Database db;
+    public MySQL db;
     public PreparedStatement ps;
     
     private String tablename;
@@ -44,18 +40,14 @@ public class Register extends JavaPlugin {
     @Override
     public void onEnable(){
         this.saveDefaultConfig();
-        String dbhost=this.getConfig().getString("connection.hostname","localhost");
-        int dbport=this.getConfig().getInt("connection.port",3306);
-        String dbname=this.getConfig().getString("connection.name","minecraft");
-        String dbuser=this.getConfig().getString("connection.username","plugin");
-        String dbpass=this.getConfig().getString("connection.password","password");
         tablename=this.getConfig().getString("database.table-name","users");
         usercolumn=this.getConfig().getString("database.user-column","username");
         emailcolumn=this.getConfig().getString("database.email-column","email");
         passcolumn=this.getConfig().getString("database.password-column","password");
         hashing=this.getConfig().getString("hashing","none");
+        db = new MySQL(this);
         hash=new HashPassword();
-        util=new Utility();
+        util=new Utility(db);
         if("md5".equals(hashing)){
             passchars=32;
             this.getLogger().log(Level.INFO, "MD5 hashing selected!");
@@ -68,14 +60,7 @@ public class Register extends JavaPlugin {
             passchars=128;
             this.getLogger().log(Level.INFO, "No hashing selected!");
         }
-        this.getLogger().log(Level.INFO, "Connecting to database...");
-        db=new MySQL(Logger.getLogger("Minecraft"),"MySQL Register",dbhost,dbport,dbname,dbuser,dbpass);
-        if(db.open()){
-            this.getLogger().log(Level.INFO, "Connected to database!");
-        }
-        else{
-            this.getLogger().log(Level.SEVERE, "Could not connect to database!");
-        }
+        db.connect();
         if(!db.isTable(tablename)){
             this.getLogger().log(Level.WARNING, "Did not find table specified in cofig! Creating it...");
             try {
@@ -89,7 +74,7 @@ public class Register extends JavaPlugin {
     }
     
     public void onDisable(){
-        if(db.isOpen()){
+        if(db.isConn()){
             if(db.close()){
                 this.getLogger().log(Level.INFO, "Disconnected from database!");
             }
@@ -102,7 +87,7 @@ public class Register extends JavaPlugin {
     
     @Override
     public boolean onCommand(CommandSender sender,Command cmd,String label,String[] args){
-        if(db.isOpen()){
+        if(db.isConn()){
             if(cmd.getName().equalsIgnoreCase("register")){
                 if(sender instanceof Player){
                     if(args.length>3){
@@ -129,14 +114,14 @@ public class Register extends JavaPlugin {
                                             return true;
                                         }
                                         catch(SQLException e){
+                                            e.printStackTrace();
                                             this.getLogger().log(Level.SEVERE, "Registration error: could not execute prepared statement!");
                                             sender.sendMessage(REGISTER_FAIL);
-                                            e.printStackTrace();
                                         }
                                     } catch (SQLException e) {
-                                                                                this.getLogger().log(Level.SEVERE, "Registration error: could not prepare statement/assign values to it!");
-                                        sender.sendMessage(REGISTER_FAIL);
                                         e.printStackTrace();
+                                        this.getLogger().log(Level.SEVERE, "Registration error: could not prepare statement/assign values to it!");
+                                        sender.sendMessage(REGISTER_FAIL);
                                     }
                                 }
                                 else{

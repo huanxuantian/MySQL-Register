@@ -5,6 +5,13 @@ import java.sql.SQLException;
 
 public class Utility {
     
+    private MySQL db;
+    
+    public Utility(MySQL my)
+    {
+        db = my;
+    }
+    
     public boolean isEmailValid(String email){
         String[] ill={"'","\"","!","$","%","^","&","*","(",")","-","+","=","~","`",",","<",">","?","/",":",";","\\","|"};
         if(email.contains("@")){
@@ -27,7 +34,7 @@ public class Utility {
     
     public boolean canRegister(String username,String tablename,String usercolumn){
         try {
-            ResultSet rs=Register.db.query("SELECT * FROM "+tablename+" WHERE "+usercolumn+"='"+username+"'");
+            ResultSet rs=db.query("SELECT * FROM "+tablename+" WHERE "+usercolumn+"='"+username+"'");
             int i=0;
             while(rs.next()){
                 i++;
